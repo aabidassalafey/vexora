@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vexora Motion Pulse - Financial Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Lucide Icons as SVG components
+        const Plus = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        );
+
+        const Download = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+        );
+
+        const Copy = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+        );
+
+        const Check = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        );
+
+        const Trash2 = () => (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+        );
+
+        const Calculator = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+                <line x1="8" y1="6" x2="16" y2="6"></line>
+                <line x1="8" y1="10" x2="16" y2="10"></line>
+                <line x1="8" y1="14" x2="16" y2="14"></line>
+                <line x1="8" y1="18" x2="16" y2="18"></line>
+            </svg>
+        );
+
+        const VexoraFinancialTracker = () => {
+            const [projects, setProjects] = useState([]);
+            const [monthYear, setMonthYear] = useState(() => {
+                const now = new Date();
+                return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            });
+            const [vrf, setVrf] = useState(0);
+            const [copied, setCopied] = useState(false);
+
+            const serviceTypes = {
+                'Photography': { company: 20, contributor: 80 },
+                'Videography': { company: 30, contributor: 70 },
+                'Graphics Design': { company: 40, contributor: 60 },
+                'Printed-Small': { company: 40, contributor: 60, markup: '30-40%', range: 'Up to ₦20,000' },
+                'Printed-Medium': { company: 35, contributor: 65, markup: '25-30%', range: '₦20,001-₦60,000' },
+                'Printed-Large': { company: 30, contributor: 70, markup: '20-25%', range: 'Above ₦60,000' }
+            };
+
+            // Load data from localStorage
+            useEffect(() => {
+                const storageKey = `vexora-${monthYear}`;
+                const saved = localStorage.getItem(storageKey);
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        setProjects(data.projects || []);
+                        setVrf(data.vrf || 0);
+                    } catch (e) {
+                        console.error('Failed to load data:', e);
+                    }
+                }
+            }, [monthYear]);
+
+            // Save data to localStorage
+            useEffect(() => {
+                const storageKey = `vexora-${monthYear}`;
+                const data = { projects, vrf, lastUpdated: new Date().toISOString() };
+                localStorage.setItem(storageKey, JSON.stringify(data));
+            }, [projects, vrf, monthYear]);
+
+            const addProject = () => {
+                setProjects([...projects, {
+                    id: Date.now(),
+                    date: new Date().toISOString().split('T')[0],
+                    name: '',
+                    type: 'Photography',
+                    clientPayment: 0,
+                    directExpenses: 0,
+                    contributorNames: '',
+                    notes: ''
+                }]);
+            };
+
+            const updateProject = (id, field, value) => {
+                setProjects(projects.map(p => p.id === id ? { ...p, [field]: value } : p));
+            };
+
+            const deleteProject = (id) => {
+                if (confirm('Are you sure you want to delete this project?')) {
+                    setProjects(projects.filter(p => p.id !== id));
+                }
+            };
+
+            const calculateProject = (project) => {
+                const { clientPayment, directExpenses, type } = project;
+                const netRevenue = clientPayment - directExpenses;
+                const rates = serviceTypes[type];
+                
+                const companyGross = (netRevenue * rates.company) / 100;
+                const contributorPayout = (netRevenue * rates.contributor) / 100;
+                const vrfAllocation = (companyGross * 30) / 100;
+                const netProfitFounders = (companyGross * 70) / 100;
+                const asimShare = (netProfitFounders * 70) / 100;
+                const ahmadShare = (netProfitFounders * 30) / 100;
+
+                return {
+                    netRevenue,
+                    companyGross,
+                    contributorPayout,
+                    vrfAllocation,
+                    netProfitFounders,
+                    asimShare,
+                    ahmadShare
+                };
+            };
+
+            const calculateTotals = () => {
+                return projects.reduce((acc, project) => {
+                    const calc = calculateProject(project);
+                    return {
+                        totalRevenue: acc.totalRevenue + project.clientPayment,
+                        totalExpenses: acc.totalExpenses + project.directExpenses,
+                        totalContributor: acc.totalContributor + calc.contributorPayout,
+                        totalVRF: acc.totalVRF + calc.vrfAllocation,
+                        totalAsim: acc.totalAsim + calc.asimShare,
+                        totalAhmad: acc.totalAhmad + calc.ahmadShare,
+                        totalNetProfit: acc.totalNetProfit + calc.netProfitFounders
+                    };
+                }, {
+                    totalRevenue: 0,
+                    totalExpenses: 0,
+                    totalContributor: 0,
+                    totalVRF: 0,
+                    totalAsim: 0,
+                    totalAhmad: 0,
+                    totalNetProfit: 0
+                });
+            };
+
+            const exportToCSV = () => {
+                const totals = calculateTotals();
+                let csv = 'VEXORA MOTION PULSE - MONTHLY FINANCIAL REPORT\n';
+                csv += `Month/Year: ${monthYear}\n`;
+                csv += `Current VRF Balance: ₦${vrf.toLocaleString()}\n\n`;
+                
+                csv += 'Date,Project Name,Service Type,Client Payment,Direct Expenses,Net Revenue,Contributor Payout,Company Gross,VRF (30%),Net Profit Founders,Asim (70%),Ahmad (30%),Contributors,Notes\n';
+                
+                projects.forEach(project => {
+                    const calc = calculateProject(project);
+                    csv += `${project.date},"${project.name}",${project.type},${project.clientPayment},${project.directExpenses},${calc.netRevenue.toFixed(2)},${calc.contributorPayout.toFixed(2)},${calc.companyGross.toFixed(2)},${calc.vrfAllocation.toFixed(2)},${calc.netProfitFounders.toFixed(2)},${calc.asimShare.toFixed(2)},${calc.ahmadShare.toFixed(2)},"${project.contributorNames}","${project.notes}"\n`;
+                });
+                
+                csv += `\nTOTALS,,,${totals.totalRevenue.toFixed(2)},${totals.totalExpenses.toFixed(2)},,${totals.totalContributor.toFixed(2)},,${totals.totalVRF.toFixed(2)},${totals.totalNetProfit.toFixed(2)},${totals.totalAsim.toFixed(2)},${totals.totalAhmad.toFixed(2)},,\n`;
+                
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', `Vexora_Financial_${monthYear}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            };
+
+            const copyToClipboard = async () => {
+                const totals = calculateTotals();
+                let text = 'VEXORA MOTION PULSE - MONTHLY FINANCIAL REPORT\n';
+                text += `Month/Year: ${monthYear}\n`;
+                text += `Current VRF Balance: ₦${vrf.toLocaleString()}\n\n`;
+                
+                text += 'Date\tProject Name\tService Type\tClient Payment\tDirect Expenses\tNet Revenue\tContributor Payout\tCompany Gross\tVRF (30%)\tNet Profit Founders\tAsim (70%)\tAhmad (30%)\tContributors\tNotes\n';
+                
+                projects.forEach(project => {
+                    const calc = calculateProject(project);
+                    text += `${project.date}\t${project.name}\t${project.type}\t${project.clientPayment}\t${project.directExpenses}\t${calc.netRevenue.toFixed(2)}\t${calc.contributorPayout.toFixed(2)}\t${calc.companyGross.toFixed(2)}\t${calc.vrfAllocation.toFixed(2)}\t${calc.netProfitFounders.toFixed(2)}\t${calc.asimShare.toFixed(2)}\t${calc.ahmadShare.toFixed(2)}\t${project.contributorNames}\t${project.notes}\n`;
+                });
+                
+                text += `\nTOTALS\t\t\t${totals.totalRevenue.toFixed(2)}\t${totals.totalExpenses.toFixed(2)}\t\t${totals.totalContributor.toFixed(2)}\t\t${totals.totalVRF.toFixed(2)}\t${totals.totalNetProfit.toFixed(2)}\t${totals.totalAsim.toFixed(2)}\t${totals.totalAhmad.toFixed(2)}\t\t\n`;
+                
+                try {
+                    await navigator.clipboard.writeText(text);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                } catch (err) {
+                    alert('Failed to copy. Please try the download button on desktop.');
+                }
+            };
+
+            const totals = calculateTotals();
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 mb-6 border border-white/20">
+                            <h1 className="text-3xl font-bold text-white mb-2">Vexora Motion Pulse</h1>
+                            <p className="text-purple-200">Monthly Financial Tracker</p>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                <div>
+                                    <label className="text-sm text-purple-200 block mb-1">Month/Year</label>
+                                    <input
+                                        type="month"
+                                        value={monthYear}
+                                        onChange={(e) => setMonthYear(e.target.value)}
+                                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm text-purple-200 block mb-1">Current VRF Balance (₦)</label>
+                                    <input
+                                        type="number"
+                                        value={vrf}
+                                        onChange={(e) => setVrf(Number(e.target.value))}
+                                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white"
+                                        placeholder="0"
+                                    />
+                                </div>
+                                <div className="flex items-end gap-2">
+                                    <button
+                                        onClick={addProject}
+                                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded transition"
+                                    >
+                                        <Plus />
+                                        Add Project
+                                    </button>
+                                    <button
+                                        onClick={copyToClipboard}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition"
+                                    >
+                                        {copied ? <Check /> : <Copy />}
+                                        {copied ? 'Copied!' : 'Copy'}
+                                    </button>
+                                    <button
+                                        onClick={exportToCSV}
+                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition"
+                                    >
+                                        <Download />
+                                        Download
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-lg rounded-lg p-4 border border-blue-400/30">
+                                <div className="text-blue-200 text-sm mb-1">Total Revenue</div>
+                                <div className="text-2xl font-bold text-white">₦{totals.totalRevenue.toLocaleString()}</div>
+                            </div>
+                            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-lg rounded-lg p-4 border border-green-400/30">
+                                <div className="text-green-200 text-sm mb-1">VRF Allocation</div>
+                                <div className="text-2xl font-bold text-white">₦{Math.round(totals.totalVRF).toLocaleString()}</div>
+                            </div>
+                            <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-lg rounded-lg p-4 border border-purple-400/30">
+                                <div className="text-purple-200 text-sm mb-1">Asim (70%)</div>
+                                <div className="text-2xl font-bold text-white">₦{Math.round(totals.totalAsim).toLocaleString()}</div>
+                            </div>
+                            <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/20 backdrop-blur-lg rounded-lg p-4 border border-pink-400/30">
+                                <div className="text-pink-200 text-sm mb-1">Ahmad (30%)</div>
+                                <div className="text-2xl font-bold text-white">₦{Math.round(totals.totalAhmad).toLocaleString()}</div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 border border-white/20 overflow-x-auto">
+                            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                                <Calculator />
+                                Projects
+                            </h2>
+                            
+                            {projects.length === 0 ? (
+                                <div className="text-center py-12 text-purple-200">
+                                    <p className="text-lg mb-2">No projects added yet</p>
+                                    <p className="text-sm">Click "Add Project" to start tracking</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {projects.map(project => {
+                                        const calc = calculateProject(project);
+                                        return (
+                                            <div key={project.id} className="bg-white/5 rounded-lg p-4 border border-white/10">
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                                                    <div>
+                                                        <label className="text-xs text-purple-200 block mb-1">Date</label>
+                                                        <input
+                                                            type="date"
+                                                            value={project.date}
+                                                            onChange={(e) => updateProject(project.id, 'date', e.target.value)}
+                                                            className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs text-purple-200 block mb-1">Project Name</label>
+                                                        <input
+                                                            type="text"
+                                                            value={project.name}
+                                                            onChange={(e) => updateProject(project.id, 'name', e.target.value)}
+                                                            className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm"
+                                                            placeholder="Enter project name"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs text-purple-200 block mb-1">Service Type</label>
+                                                        <select
+                                                            value={project.type}
+                                                            onChange={(e) => updateProject(project.id, 'type', e.target.value)}
+                                                            className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm"
+                                                        >
+                                                            <option value="Photography">Photography (20/80)</option>
+                                                            <option value="Videography">Videography (30/70)</option>
+                                                            <option value="Graphics Design">Graphics (40/60)</option>
+                                                            <option value="Printed-Small">Printed-Small (40/60) - Up to ₦20K</option>
+                                                            <option value="Printed-Medium">Printed-Medium (35/65) - ₦20K-₦60K</option>
+                                                            <option value="Printed-Large">Printed-Large (30/70) - Above ₦60K</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs text-purple-200 block mb-1">Client Payment (₦)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={project.clientPayment}
+                                                            onChange={(e) => updateProject(project.id, 'clientPayment', Number(e.target.value))}
+                                                            className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm"
+                                                            placeholder="0"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                                                    <div>
+                                                        <label className="text-xs text-purple-200 block mb-1">Direct Expenses (₦)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={project.directExpenses}
+                                                            onChange={(e) => updateProject(project.id, 'directExpenses', Number(e.target.value))}
+                                                            className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm"
+                                                            placeholder="0"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs text-purple-200 block mb-1">Contributor Names</label>
+                                                        <input
+                                                            type="text"
+                                                            value={project.contributorNames}
+                                                            onChange={(e) => updateProject(project.id, 'contributorNames', e.target.value)}
+                                                            className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm"
+                                                            placeholder="Enter names"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs text-purple-200 block mb-1">Notes</label>
+                                                        <input
+                                                            type="text"
+                                                            value={project.notes}
+                                                            onChange={(e) => updateProject(project.id, 'notes', e.target.value)}
+                                                            className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm"
+                                                            placeholder="Optional notes"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 md:grid-cols-7 gap-2 text-xs border-t border-white/10 pt-3">
+                                                    <div>
+                                                        <div className="text-purple-300">Contributor</div>
+                                                        <div className="text-white font-semibold">₦{Math.round(calc.contributorPayout).toLocaleString()}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-purple-300">Co. Gross</div>
+                                                        <div className="text-white font-semibold">₦{Math.round(calc.companyGross).toLocaleString()}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-purple-300">VRF (30%)</div>
+                                                        <div className="text-green-400 font-semibold">₦{Math.round(calc.vrfAllocation).toLocaleString()}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-purple-300">Net Profit</div>
+                                                        <div className="text-white font-semibold">₦{Math.round(calc.netProfitFounders).toLocaleString()}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-purple-300">Asim (70%)</div>
+                                                        <div className="text-blue-400 font-semibold">₦{Math.round(calc.asimShare).toLocaleString()}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-purple-300">Ahmad (30%)</div>
+                                                        <div className="text-pink-400 font-semibold">₦{Math.round(calc.ahmadShare).toLocaleString()}</div>
+                                                    </div>
+                                                    <div className="flex items-center justify-end">
+                                                        <button
+                                                            onClick={() => deleteProject(project.id)}
+                                                            className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded transition"
+                                                        >
+                                                            <Trash2 />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-6 bg-white/5 backdrop-blur-lg rounded-lg p-4 border border-white/10">
+                            <div className="text-xs text-purple-200 space-y-1">
+                                <p><strong>Policy Notes (Updated 2025):</strong></p>
+                                <p>• Company Gross = (Client Payment - Expenses) × Company %</p>
+                                <p>• VRF gets 30% of Company Gross (target: ₦500,000)</p>
+                                <p>• Net Profit for Founders = 70% of Company Gross</p>
+                                <p>• Final Split: Asim 70%, Ahmad 30%</p>
+                                <p className="pt-2"><strong>Order Size (by Third-Party Vendor Cost):</strong></p>
+                                <p>• Small: Up to ₦20,000 (30-40% markup)</p>
+                                <p>• Medium: ₦20,001-₦60,000 (25-30% markup)</p>
+                                <p>• Large: Above ₦60,000 (20-25% markup)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<VexoraFinancialTracker />, document.getElementById('root'));
+    </script>
+</body>
+</html>
